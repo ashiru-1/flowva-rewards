@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { authSchema, type AuthFormData } from '../lib/schemas';
 import { Eye, EyeOff } from 'lucide-react';
@@ -146,9 +146,9 @@ export default function Login() {
                             <p className="text-red-500 text-xs mt-1 ml-1">{formErrors.password}</p>
                         )}
                         <div className="flex justify-end mt-2">
-                            <a href="/forgot-password" className="text-xs font-semibold text-[#8b5cf6] hover:text-[#7c3aed] transition-colors cursor-pointer">
+                            <Link to="/forgot-password" className="text-xs font-semibold text-[#8b5cf6] hover:text-[#7c3aed] transition-colors cursor-pointer">
                                 Forgot password?
-                            </a>
+                            </Link>
                         </div>
                     </div>
 

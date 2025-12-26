@@ -13,7 +13,6 @@ export default function ResetPassword() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
-        // Validate user is authenticated (via the reset link)
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) {
                 toast.error('Invalid or expired reset session.');
