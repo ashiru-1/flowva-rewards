@@ -1,0 +1,79 @@
+/* Custom Scrollbar Styles */
+@import "tailwindcss";
+
+@layer utilities {
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    /* Thin scrollbar for other containers if needed */
+    .thin-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .thin-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .thin-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #e2e8f0;
+        border-radius: 20px;
+    }
+
+    .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: #cbd5e1;
+    }
+}
+
+/* Global scrollbar refinement */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+body {
+    overflow-x: hidden;
+    /* Prevent horizontal scroll on body */
+}
+
+@keyframes scale-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.15);
+        opacity: 0.8;
+    }
+}
+
+.animate-scale-pulse {
+    animation: scale-pulse 1.5s ease-in-out infinite;
+}
