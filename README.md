@@ -1,73 +1,161 @@
-# React + TypeScript + Vite
+# Flowva Rewards Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack rewards dashboard built with **React**, **TypeScript**, and **Supabase**.
 
-Currently, two official plugins are available:
+This project implements a complete point-based loyalty system where users can earn points via daily check-ins and referrals, track their streak, and redeem rewards. All critical business logic (points calculation, transaction history, security) is handled on the database layer via **Postgres Triggers** and **RPC Functions** to ensure data integrity.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠 Tech Stack
 
-## Expanding the ESLint configuration
+**Frontend:**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+* **React** (Vite) - Fast scaffolding and dev server.
+* **TypeScript** - For type safety and better DX.
+* **Tailwind CSS (v4)** - Styling and responsive design.
+* **TanStack Query** - Server state management, caching, and optimistic UI updates.
+* **Zod** - Runtime validation for authentication forms.
+* **Lucide React** - Iconography.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+**Backend (Supabase):**
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+* **PostgreSQL** - Main database.
+* **Auth** - Email/Password authentication.
+* **Row Level Security (RLS)** - Data protection policies.
+* **Database Triggers** - Automated profile creation and referral tracking.
+* **RPC Functions** - Server-side logic for "Claim Streak" and "Redeem Reward".
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## ✨ Features
+
+* **Authentication:** Secure Sign Up/Login flows with input validation.
+* **Referral System:** Automated point attribution. When a user signs up with a `?ref=` link, the referrer is automatically credited via a database trigger.
+* **Daily Streak:** Logic to track consecutive login days. Points are only awarded if the last check-in was yesterday (handled via SQL).
+* **Reward Redemption:** Users can redeem items if they have sufficient balance. This transaction is atomic (deducts points + logs transaction history).
+* **Responsive UI:** Fully responsive layout with a sticky mobile header and smooth scrolling tabs.
+
+---
+
+## 🏗 Setup Instructions
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/flowva-rewards.git
+cd flowva-rewards
+
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. **Install dependencies**
+```bash
+pnpm install
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+
+
+3. **Environment Variables**
+Create a `.env.local` file in the root directory:
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+```
+
+
+4. **Run Locally**
+```bash
+pnpm run dev
+
+```
+
+
+
+---
+
+## 🗄 Database Schema & Setup
+
+This project relies on a specific Supabase schema. Run the following SQL in your Supabase SQL Editor to replicate the backend logic.
+
+### 1. Tables & RLS
+
+```sql
+-- Profiles table linked to Auth
+create table public.profiles (
+  id uuid references auth.users not null primary key,
+  email text,
+  first_name text,
+  points_balance int default 0,
+  current_streak int default 0,
+  last_check_in timestamptz,
+  referral_code text unique,
+  total_referrals int default 0,
+  created_at timestamptz default now()
+);
+
+-- Rewards Catalog
+create table public.rewards (
+  id bigint generated by default as identity primary key,
+  title text not null,
+  description text,
+  cost int not null,
+  category text,
+  is_coming_soon boolean default false
+);
+
+-- Transaction History (Audit Log)
+create table public.transactions (
+  id bigint generated by default as identity primary key,
+  user_id uuid references public.profiles(id) not null,
+  amount int not null,
+  description text not null,
+  created_at timestamptz default now()
+);
+
+-- Enable RLS
+alter table public.profiles enable row level security;
+alter table public.rewards enable row level security;
+alter table public.transactions enable row level security;
+
+-- Policies
+create policy "Users view own profile" on public.profiles for select using (auth.uid() = id);
+create policy "Public view rewards" on public.rewards for select using (true);
+create policy "Users view own transactions" on public.transactions for select using (auth.uid() = user_id);
+
+```
+
+### 2. Business Logic (RPC Functions)
+
+We use Remote Procedure Calls to handle logic securely on the server side.
+
+* `claim_daily_streak()`: Checks date logic and increments streak.
+* `redeem_reward(reward_id)`: Checks balance, deducts points, and logs transaction atomically.
+
+*(See `src/lib/database.types.ts` or project migration files for full function definitions).*
+
+---
+
+## 💡 Assumptions & Trade-offs
+
+1. **Referral Tracking:**
+* *Implementation:* I used `localStorage` to persist the referral code when a visitor lands on the site.
+* *Trade-off:* If a user clears their cache or switches devices between clicking the link and signing up, the referral is lost. A more robust production solution would use cookies or server-side tracking.
+
+
+2. **Point Logic:**
+* *Decision:* All point calculations (deductions, additions) are done via SQL functions, not frontend JavaScript.
+* *Reasoning:* This prevents users from manipulating client-side code to give themselves free points.
+
+
+3. **UI State:**
+* *Decision:* Used **TanStack Query** over `useEffect` or Redux.
+* *Reasoning:* It handles loading/error states and caching automatically, which is ideal for a dashboard that needs to reflect real-time balance changes immediately after a user action.
+
+
+
+---
+
+## 👤 Author
+
+**David Ashiru**
+*Software Engineer | Cybersecurity Specialist*
